@@ -1,0 +1,1020 @@
+// ==UserScript==
+// @name        BLS PRO full auto
+// @version     0.1.14.03.2025
+// @description BLS PRO Version Y @ Y
+// @match       https://www.blsspainmorocco.net/*
+// @match       https://mail.google.com/*
+// @grant       unsafeWindow
+// @grant       GM_setValue
+// @grant       GM_getValue
+// @grant       GM_addValueChangeListener
+// @grant       GM_removeValueChangeListener
+// @grant       GM_xmlhttpRequest
+// ==/UserScript==
+'use strict';
+
+// Debug settings
+const debugMode = true; // Set to false in production
+function debugLog(...args) {
+  if (debugMode) console.log('[BLS PRO DEBUG]', ...args);
+}
+
+const autoSubmitForms = {
+  login: 'on',
+  loginCaptcha: 'on',
+  appointmentCaptcha: 'off',
+  visaType: 'on',
+  slotSelection: 'on',
+  applicantSelection: 'on'
+};
+const applicants = [{
+  name: 'said',
+  mail: 'sa@GMAIL.COM',
+  password: '*19id*',
+  profilePhotoId: '',
+  applicantCount: 1,
+  category: 'normal',
+  // n | normal, pm | premium, pt | primetime
+  location: 'rabat',
+  visa: 'sch' // sch, std, famr, nat, work, c1, c2, c3
+}];
+function _0x3863b6(_0x21223b, _0x53872f = location.pathname) {
+  return _0x4691f9(_0x21223b).test(_0x53872f);
+  function _0x4691f9(_0x2a98d3) {
+    const _0x548917 = '^' + _0x2a98d3.replace(/\/*$/, '').replace(/^\/*/, '/').replaceAll(/[\\.*+^${}|()[\]]/g, "\\$&") + '/*$';
+    return new RegExp(_0x548917, 'i');
+  }
+}
+function _0x2338b9(_0x5a977d) {
+  let _0x8c2c79 = -0x1;
+  const _0x5693ed = _0x5a977d.length;
+  const _0x236631 = _0x5693ed - 0x1;
+  while (++_0x8c2c79 < _0x5693ed) {
+    const _0x2465f1 = _0x8c2c79 + Math.floor(Math.random() * (_0x236631 - _0x8c2c79 + 0x1));
+    [_0x5a977d[_0x8c2c79], _0x5a977d[_0x2465f1]] = [_0x5a977d[_0x2465f1], _0x5a977d[_0x8c2c79]];
+  }
+  return _0x5a977d;
+}
+function _0x139e15(_0x514032, _0x23cddf) {
+  return _0x514032 + Math.floor(Math.random() * (_0x23cddf - _0x514032 + 0x1));
+}
+class _0x293dd7 {
+  constructor(_0x3d8663, _0x43394c) {
+    this.url = _0x3d8663;
+    this.delay = _0x43394c;
+  }
+  ["start"]() {
+    debugLog(`Redirecting to ${this.url} in ${this.delay}ms`);
+    setTimeout(() => {
+      window.location.href = this.url;
+    }, this.delay);
+  }
+}
+class _0x6e19da {
+  ["start"]() {
+    console.log(this.constructor.name + " started");
+    this.#hidePreloader();
+    this.#makeLoaderDismissable();
+    this.#removeRandomnessFromUi();
+    this.#enableCopyPasteInInputs();
+    this.#setReturnUrl();
+    this.#injectLoginFeature();
+  }
+  #hidePreloader() {
+    $(".preloader").hide();
+  }
+  #makeLoaderDismissable() {
+    $("\n      <button class=\"btn btn-secondary position-absolute top-50 start-50 translate-middle-x mt-5\"\n              onclick=\"window.HideLoader();\">\n        Hide Loader\n      </button>\n    ").appendTo(".global-overlay-loader");
+  }
+  #removeRandomnessFromUi() {
+    $("#div-main > .container > .row > [class^=col-]").hide();
+    $("#div-main > .container > .row > :has(form)").addClass("mx-auto");
+    $(":has(> form)").removeAttr('class');
+  }
+  #enableCopyPasteInInputs() {
+    $(".entry-disabled:visible").on("copy paste", _0x179013 => _0x179013.stopImmediatePropagation());
+  }
+  #setReturnUrl() {
+    $("#ReturnUrl").val($(".new-app-active").attr('href'));
+  }
+  #injectLoginFeature() {
+    const _0x425559 = $("<div id=\"user-grid\" class=\"d-flex flex-wrap justify-content-center mt-2\"></div>");
+    $(_0x425559).insertAfter(".text-center:has(img[alt=logo])");
+    applicants.forEach(({
+      name: _0x54c584,
+      mail: _0x1f349d
+    }) => {
+      const _0x389710 = $("\n        <div class=\"user-card text-center m-2 p-2 border rounded shadow\" style=\"width: 120px; cursor: pointer; background-color: #f8f9fa;\">\n          <div class=\"mt-2\">" + (_0x54c584 || _0x1f349d) + "</div>\n        </div>\n      ");
+      this.#fillForm(_0x1f349d);
+      _0x425559.append(_0x389710);
+    });
+    $("<style>").prop("type", "text/css").html("\n.user-card {\n    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;\n    padding: 15px;\n    border: 1px solid transparent;\n    border-radius: 10px;\n    background: linear-gradient(135deg, #127a2d, #17732c);\n    color: #fff;\n    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);\n    font-family: 'Arial', sans-serif;\n    font-size: 15px;\n    font-weight: normal;\n}\n\n.user-card:hover {\n    transform: scale(1.05) rotate(2deg);\n    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);\n    border-color: #007bff;\n}\n\n.user-card p {\n    margin: 10px 0;\n}\n\n.button {\n    background-color: #007bff;\n    color: white;\n    padding: 5px 11px;\n    border: none;\n    border-radius: 5px;\n    cursor: pointer;\n    transition: background-color 0.3s;\n}\n\n.button:hover {\n    background-color: #0056b3;\n}\n\n\n      ").appendTo("head");
+  }
+  #fillForm(_0x4c0354) {
+    const _0x55822f = applicants.find(({
+      mail: _0x49865b
+    }) => _0x49865b === _0x4c0354);
+    $(":text[name]:visible").val(_0x55822f?.["mail"]);
+    if (/on|true/.test(autoSubmitForms?.['login'])) {
+      $("#btnVerify").trigger("click");
+    }
+  }
+}
+class _0x26fc42 {
+  ["start"]() {
+    console.log(this.constructor.name + " started");
+    this.#makeLoaderDismissableAndTranslucent();
+    this.#removeRandomnessFromUi();
+    this.#enableCopyPasteInInputs();
+    const _0x2a2778 = this.#getActiveApplicant();
+    this.#markTabWithCurrentUser(_0x2a2778);
+    this.#setPassword(_0x2a2778);
+    this.#solveCaptcha();
+  }
+  #makeLoaderDismissableAndTranslucent() {
+    $("\n      <button class=\"btn btn-secondary position-absolute\" onclick=\"window.HideLoader();\"\n              style=\"top: 50%; margin-inline-start: 50%; transform: translate(-50%, calc(100% + 1rem));\">\n        Hide Loader</button>\n    ").appendTo(".global-overlay-loader");
+    $(".global-overlay").css("background-color", "rgba(0 0 0 / 30%)");
+  }
+  #removeRandomnessFromUi() {
+    $("body > .row > [class^=col-]").hide();
+    $("body > .row > :has(form)").addClass("mx-auto");
+    $("#captcha-main-div").addClass("d-flex flex-column");
+    const _0x37d917 = {
+      "height": "auto"
+    };
+    $("#captcha-main-div > .pwd-div:has(form)").addClass("order-0").css(_0x37d917);
+    $("#captcha-main-div > .main-div-container").addClass("order-1");
+    $("#captcha-main-div > .pwd-div:not(:has(*))").hide();
+  }
+  #enableCopyPasteInInputs() {
+    $(".entry-disabled:visible").off("copy paste");
+  }
+  #getActiveApplicant() {
+    const _0x4913d5 = $(":contains(Email:) > b").text();
+    return applicants.find(({
+      mail: _0x6f75df
+    }) => _0x6f75df === _0x4913d5);
+  }
+  #markTabWithCurrentUser(_0x3246fb) {
+    if (_0x3246fb?.["name"]) {
+      document.title = _0x3246fb.name;
+    }
+    const _0x252713 = {
+      "width": "128px",
+      height: "128px",
+      "objectFit": "cover"
+    };
+    if (_0x3246fb?.["profilePhotoId"]) {
+      $("img[alt=logo]").addClass("img-thumbnail").css(_0x252713).attr("src", "/MAR/query/getfile?fileid=" + _0x3246fb.profilePhotoId);
+    }
+  }
+  #setPassword(_0x31bf9d) {
+    $(":password:visible").val(_0x31bf9d?.["password"]);
+  }
+  #solveCaptcha() {
+    if (!(/on|true/.test('on') && 'kingiliass-12d97066-e6c1-dd28-5264-eefcb0cacaee')) {
+      return;
+    }
+    const _0x154082 = this.#getCaptchaTarget();
+    const _0xce5a0b = this.#getCaptchaGrid();
+    const _0x369fa7 = _0x168199 => Object.fromEntries(_0x168199.map(_0x438a00 => _0x438a00.src).entries());
+    const _0x50dca4 = _0x5825c5 => {
+      if (_0x5825c5.status === "solved") {
+        Object.entries(_0x5825c5.solution).forEach(([_0x2c3865, _0x50ee77]) => _0x50ee77 === _0x154082 && _0xce5a0b[_0x2c3865].click());
+        if (/on|true/.test(autoSubmitForms?.["loginCaptcha"])) {
+          $("#btnVerify").trigger("click");
+        }
+      } else {
+        _0x29cf1f("captchaerror", _0x5825c5);
+      }
+    };
+    const _0x29cf1f = (_0x163ca1, _0x4b50e4) => {
+      console.error(_0x163ca1, _0x4b50e4);
+      $(".validation-summary-valid").html("<b>Failed to solve captcha.</b>");
+    };
+    const _0x2af30b = {
+      "apiKey": 'kingiliass-12d97066-e6c1-dd28-5264-eefcb0cacaee'
+    };
+    $.post({
+      'url': "https://pro.nocaptchaai.com/solve",
+      'headers': _0x2af30b,
+      'contentType': "application/json",
+      'dataType': "json",
+      'data': JSON.stringify({
+        'method': 'ocr',
+        'id': "morocco",
+        'images': _0x369fa7(_0xce5a0b)
+      }),
+      'timeout': 0x7530,
+      'beforeSend'() {
+        this._loading = $("\n          <div class=\"d-flex align-items-center justify-content-center lead text-warning\">\n            <span class=\"spinner-grow\"></span>\n            &nbsp;Solving captcha ...\n          </div>\n        ").prependTo(".main-div-container");
+      },
+      'complete'(_0x1af352, _0x3515f1) {
+        this._loading?.["remove"]();
+        switch (_0x3515f1) {
+          case "success":
+            _0x50dca4(_0x1af352.responseJSON);
+            break;
+          case 'error':
+          case "parsererror":
+            _0x29cf1f(_0x3515f1, _0x1af352);
+            break;
+        }
+      }
+    });
+  }
+  #getCaptchaTarget() {
+    return $('.box-label').sort((_0x1ae084, _0x298a16) => getComputedStyle(_0x298a16).zIndex - getComputedStyle(_0x1ae084).zIndex).first().text().replace(/\D+/, '');
+  }
+  #getCaptchaGrid() {
+    return $(":has(> .captcha-img):visible").get().reduce((_0x321eb4, _0x263955) => {
+      (_0x321eb4[Math.floor(_0x263955.offsetTop)] ??= []).push(_0x263955);
+      return _0x321eb4;
+    }, []).flatMap(_0x21e2c2 => {
+      const _0x59d3d1 = _0x21e2c2.sort((_0x4a2f42, _0x57fd22) => getComputedStyle(_0x57fd22).zIndex - getComputedStyle(_0x4a2f42).zIndex);
+      const _0x445670 = _0x59d3d1.slice(0x0, 0x3);
+      const _0x1d112f = _0x445670.sort((_0x163cb3, _0x4f5cd3) => _0x163cb3.offsetLeft - _0x4f5cd3.offsetLeft);
+      return _0x1d112f;
+    }).map(_0x5d7d6d => _0x5d7d6d.firstElementChild);
+  }
+}
+class _0x2075f9 {
+  ["start"]() {
+    console.log(this.constructor.name + " started");
+    this.#hidePreloader();
+    this.#makeLoaderDismissable();
+    this.#removeRandomnessFromUi();
+    this.#solveCaptcha();
+  }
+  #hidePreloader() {
+    $(".preloader").hide();
+  }
+  #makeLoaderDismissable() {
+    $("\n      <button class=\"btn btn-secondary position-absolute top-50 start-50 translate-middle-x mt-5\"\n              onclick=\"window.HideLoader();\">\n        Hide Loader</button>\n    ").appendTo(".global-overlay-loader");
+  }
+  #removeRandomnessFromUi() {
+    $(".row:has(> .captcha-div) > [class^=col-]").hide();
+    $(".captcha-div").addClass("mx-auto");
+  }
+  #solveCaptcha() {
+    if (!(/on|true/.test('on') && 'kingiliass-12d97066-e6c1-dd28-5264-eefcb0cacaee')) {
+      return;
+    }
+    const _0x5287f4 = this.#getCaptchaTarget();
+    const _0x47172f = this.#getCaptchaGrid();
+    const _0x59c213 = _0x2a0c0e => Object.fromEntries(_0x2a0c0e.map(_0x295151 => _0x295151.src).entries());
+    const _0x7d2726 = _0x27ba88 => {
+      if (_0x27ba88.status === "solved") {
+        Object.entries(_0x27ba88.solution).forEach(([_0x11a5ef, _0x528d78]) => _0x528d78 === _0x5287f4 && _0x47172f[_0x11a5ef].click());
+        if (/on|true/.test(localStorage.getItem("submitTVS"))) {
+          $('#btnVerify').trigger("click");
+        }
+      } else {
+        _0x22aedd("captchaerror", _0x27ba88);
+      }
+    };
+    const _0x22aedd = (_0x279362, _0x8e0ed4) => {
+      console.error(_0x279362, _0x8e0ed4);
+      $(".validation-summary-valid").html("<b>Failed to solve captcha.</b>");
+    };
+    const _0x5eb1ff = {
+      apiKey: 'kingiliass-12d97066-e6c1-dd28-5264-eefcb0cacaee'
+    };
+    $.post({
+      'url': "https://pro.nocaptchaai.com/solve",
+      'headers': _0x5eb1ff,
+      'contentType': "application/json",
+      'dataType': "json",
+      'data': JSON.stringify({
+        'method': "ocr",
+        'id': "morocco",
+        'images': _0x59c213(_0x47172f)
+      }),
+      'timeout': 0x7530,
+      'beforeSend'() {
+        this._loading = $("\n          <div class=\"d-flex align-items-center justify-content-center lead text-warning\">\n            <span class=\"spinner-grow\"></span>\n            &nbsp;Solving captcha ...\n          </div>\n        ").prependTo(".main-div-container");
+      },
+      'complete'(_0x62fa57, _0x23239c) {
+        this._loading?.["remove"]();
+        switch (_0x23239c) {
+          case "success":
+            _0x7d2726(_0x62fa57.responseJSON);
+            break;
+          case "error":
+          case "parsererror":
+            _0x22aedd(_0x23239c, _0x62fa57);
+            break;
+        }
+      }
+    });
+  }
+  #getCaptchaTarget() {
+    return $('.box-label').sort((_0x148dba, _0x19c51b) => getComputedStyle(_0x19c51b).zIndex - getComputedStyle(_0x148dba).zIndex).first().text().replace(/\D+/, '');
+  }
+  #getCaptchaGrid() {
+    return $(":has(> .captcha-img):visible").get().reduce((_0x449996, _0x24770e) => {
+      (_0x449996[Math.floor(_0x24770e.offsetTop)] ??= []).push(_0x24770e);
+      return _0x449996;
+    }, []).flatMap(_0x5dafce => {
+      const _0x278997 = _0x5dafce.sort((_0x594c96, _0x3f9828) => getComputedStyle(_0x3f9828).zIndex - getComputedStyle(_0x594c96).zIndex);
+      const _0x4617e8 = _0x278997.slice(0x0, 0x3);
+      const _0x4e88eb = _0x4617e8.sort((_0x84f37, _0x13f7c3) => _0x84f37.offsetLeft - _0x13f7c3.offsetLeft);
+      return _0x4e88eb;
+    }).map(_0x5e00db => _0x5e00db.firstElementChild);
+  }
+}
+class _0x7cb2cc {
+  #applicant;
+  ["start"]() {
+    console.log(this.constructor.name + " started");
+    this.#hidePreloader();
+    this.#makeLoaderDismissable();
+    this.#applicant = this.#getActiveApplicant();
+    
+    // Verify required data is available
+    if (!unsafeWindow.visasubIdData || !unsafeWindow.visaIdData || !unsafeWindow.categoryData || !unsafeWindow.locationData) {
+      debugLog("Required data not loaded. Waiting for page to initialize...");
+      // Add visual feedback
+      $("<div class='alert alert-warning'>Waiting for page data to load...</div>").insertBefore("form");
+      setTimeout(() => this.start(), 800);
+      return;
+    }
+    
+    debugLog("Active applicant:", this.#applicant);
+    this.#fillForm();
+    
+    $(() => {
+      ;
+      ["Category", "Location", "Visa Type", "Visa Sub Type"].forEach(_0x49767d => {
+        const _0x2df31a = $(".form-label:visible:contains(" + _0x49767d + ") + .k-widget > :text").data("kendoDropDownList");
+        if (_0x2df31a) {
+          _0x2df31a.value(_0x2df31a.value());
+        } else {
+          debugLog("DropDownList for", _0x49767d, "not found");
+        }
+      });
+      $("#div-main > div:is(:first-child, :last-child)").removeClass().hide();
+      $("#div-main > :has(form)").addClass('mx-auto');
+      $("form > div:nth-child(2)").addClass(["vstack", "gap-4"]).children('div').removeClass((_0x3a5287, _0x290c9a) => _0x290c9a.match(/m[tb]-\d/g));
+      ["Appointment For", 'Category', "Location", "Visa Type", "Visa Sub Type"].forEach((_0x1b1500, _0x49d4ab) => {
+        $("div:has(> .form-label:contains(" + _0x1b1500 + ")):visible").addClass("order-" + _0x49d4ab);
+      });
+      $("div:has(> #btnSubmit)").addClass("order-5");
+    });
+  }
+  #hidePreloader() {
+    $(".preloader").hide();
+  }
+  #makeLoaderDismissable() {
+    $("\n      <button class=\"btn btn-secondary position-absolute top-50 start-50 translate-middle-x mt-5\"\n              onclick=\"window.HideLoader();\">\n        Hide Loader</button>\n    ").appendTo(".global-overlay-loader");
+  }
+  #getActiveApplicant() {
+    const _0x2bd543 = $(".avatar + > p.small").text();
+    return applicants.find(({
+      mail: _0x2a1822
+    }) => _0x2a1822 === _0x2bd543);
+  }
+  #fillForm() {
+    try {
+      debugLog("Starting fillForm process");
+      
+      // Clear any previous error messages
+      $(".alert-danger").remove();
+      
+      // STEP 1: Set appointment type (Individual or Family)
+      const _0x299ae2 = this.#applicant?.["applicantCount"] || 0x1;
+      const _0x40b93a = _0x299ae2 > 0x1 ? 'Family' : "Individual";
+      const _0x4e539c = $(":radio:visible").filter("[value=\"" + _0x40b93a + "\"]");
+      
+      if (_0x4e539c.length === 0) {
+        throw new Error("Cannot find appointment type radio button");
+      }
+      
+      _0x4e539c.prop("checked", true);
+      
+      if (_0x40b93a === "Family") {
+        $("#AppointmentFor").val(_0x40b93a);
+        const _0x2a3ccd = _0x4e539c.prop('id').substring(_0x40b93a.length);
+        const membersField = $("#members" + _0x2a3ccd);
+        
+        if (membersField.length > 0) {
+          membersField.show();
+          const applicantData = unsafeWindow.applicantsNoData?.find(_0x49cd34 => 
+            _0x49cd34.Name.startsWith(_0x299ae2)
+          );
+          
+          if (applicantData) {
+            membersField.children(':text').val(applicantData.Value);
+          } else {
+            debugLog("Warning: Could not find applicant count data", _0x299ae2);
+          }
+        }
+      }
+      
+      // STEP 2: Set category (Normal, Premium, Prime Time)
+      const _0x3188ef = {
+        n: "Normal",
+        "normal": "Normal",
+        pm: "Premium",
+        "premium": "Premium",
+        pt: "Prime Time",
+        "primetime": "Prime Time"
+      };
+      
+      const categoryFromStorage = localStorage.getItem("Categoryspain") || this.#applicant?.category || "normal";
+      const _0x2f2821 = _0x3188ef[categoryFromStorage.toLowerCase()] || "Normal";
+      
+      const categoryData = unsafeWindow.categoryData?.find(_0x38271c => _0x38271c.Name === _0x2f2821);
+      if (!categoryData) {
+        throw new Error(`Category data not found for: ${_0x2f2821}`);
+      }
+      
+      $(".form-label:visible:contains(Category) + :text").val(categoryData.Id);
+      debugLog("Set category to:", _0x2f2821, categoryData.Id);
+      
+      // STEP 3: Set location
+      const _0x11d0ed = {
+        "tet": "Tetouan",
+        tetouan: "Tetouan",
+        "nad": 'Nador',
+        "nador": "Nador",
+        "aga": "Agadir",
+        "agadir": "Agadir",
+        rab: 'Rabat',
+        "rabat": "Rabat",
+        "tan": "Tangier",
+        "tangier": 'Tangier',
+        "cas": "Casablanca",
+        "casablanca": "Casablanca"
+      };
+      
+      const locationKey = this.#applicant?.['location']?.["toLowerCase"]() || "rabat";
+      const _0x298330 = _0x11d0ed[locationKey] || "Rabat";
+      
+      const _0x179327 = unsafeWindow.locationData?.find(_0x210f3c => _0x210f3c.Name === _0x298330);
+      if (!_0x179327) {
+        throw new Error(`Location data not found for: ${_0x298330}`);
+      }
+      
+      $(".form-label:visible:contains(Location) + :text").val(_0x179327.Id);
+      debugLog("Set location to:", _0x298330, _0x179327.Id);
+      
+      // STEP 4: Set visa type and subtype
+      const _0x33cb1a = {
+        sch: "Schengen Visa",
+        schengen: "Schengen Visa",
+        "std": "Student Visa",
+        "student": "Student Visa",
+        "famr": "Family Reunification Visa",
+        familyreunification: "Family Reunification Visa",
+        nat: "National Visa",
+        "national": "National Visa",
+        work: "Work Visa",
+        c1: "Casa 1",
+        "casa1": "Casa 1",
+        c2: "Casa 2",
+        "casa2": "Casa 2",
+        c3: "Casa 3",
+        "casa3": "Casa 3"
+      };
+      
+      const visaType = this.#applicant?.["visa"]?.["toLowerCase"]() || "sch";
+      // Default to Schengen Visa if not found
+      const _0x1e8458 = _0x33cb1a[visaType] || "Schengen Visa";
+      debugLog("Looking for visa sub type:", _0x1e8458);
+      
+      // Add error checking before using _0x231e98
+      const _0x231e98 = unsafeWindow.visasubIdData?.find(_0x254eba => _0x254eba.Name === _0x1e8458);
+      
+      // Only proceed if _0x231e98 is found
+      if (_0x231e98) {
+        debugLog("Found visa sub type:", _0x231e98);
+        $(".form-label:visible:contains(Visa Sub Type) + :text").val(_0x231e98['Id']);
+        $("#DataSource").val(_0x231e98.Code);
+        
+        const _0x1714c0 = unsafeWindow.visaIdData?.find(_0x1db3b9 => _0x1db3b9.Id === _0x231e98?.["Value"]);
+        if (_0x1714c0) {
+          debugLog("Found visa type:", _0x1714c0);
+          $(".form-label:visible:contains(Visa Type) + :text").val(_0x1714c0['Id']);
+          
+          // Only proceed with this part if both objects are defined
+          unsafeWindow.visaTypeFilterData = unsafeWindow.visaIdData.filter(_0x355dbd => 
+            _0x179327?.["VisaTypeIds"]?.["includes"](_0x355dbd.Id));
+            
+          unsafeWindow.visasubIdFilterData = unsafeWindow.visasubIdData.filter(_0x2aeef1 => {
+            return _0x2aeef1.Value === _0x1714c0.Id && (_0x179327?.["VisaSubTypeIds"]?.["includes"](_0x2aeef1.Id) ?? true);
+          });
+        } else {
+          throw new Error(`Visa type not found for value: ${_0x231e98.Value}`);
+        }
+      } else {
+        debugLog("Could not find visa sub type for:", _0x1e8458);
+        // Try to find any available visa type as fallback
+        const fallbackVisa = unsafeWindow.visasubIdData?.[0];
+        if (fallbackVisa) {
+          debugLog("Using fallback visa sub type:", fallbackVisa);
+          $(".form-label:visible:contains(Visa Sub Type) + :text").val(fallbackVisa.Id);
+          $("#DataSource").val(fallbackVisa.Code);
+          
+          const fallbackVisaType = unsafeWindow.visaIdData?.find(v => v.Id === fallbackVisa.Value);
+          if (fallbackVisaType) {
+            $(".form-label:visible:contains(Visa Type) + :text").val(fallbackVisaType.Id);
+          }
+        } else {
+          throw new Error(`No visa sub types available`);
+        }
+      }
+      
+      // Save selected values to localStorage for telegram notifications
+      localStorage.setItem("spncategory", categoryFromStorage);
+      localStorage.setItem("spnlocation", locationKey);
+      localStorage.setItem("spnvstype", visaType);
+      
+      // Trigger form submission if auto-submit is enabled
+      if (/on|true/.test(autoSubmitForms?.['visaType'])) {
+        debugLog("Auto-submitting form");
+        $("#btnSubmit").trigger("click");
+      }
+      
+    } catch (error) {
+      console.error("Error in fillForm:", error);
+      $("<div class='alert alert-danger'>Error: " + error.message + ". Please try again or select manually.</div>")
+        .insertBefore("form");
+    }
+  }
+}
+class _0x5c0192 {
+  ["start"]() {
+    console.log(this.constructor.name + " started");
+    this.#hidePreloader();
+    this.#makeLoaderDismissable();
+    this.#removeRandomnessFromUi();
+    Object.assign(unsafeWindow, {
+      'OnAppointmentdateChange': () => this.#getAvailableSlotTimes()
+    });
+    this.#selectSlot();
+  }
+  #hidePreloader() {
+    $(".preloader").hide();
+  }
+  #makeLoaderDismissable() {
+    $("\n      <button class=\"btn btn-secondary position-absolute top-50 start-50 translate-middle-x mt-5\"\n              onclick=\"window.HideLoader();\">\n        Hide Loader</button>\n    ").appendTo(".global-overlay-loader");
+  }
+  #removeRandomnessFromUi() {
+    $("#div-main > :is(:first-child, :last-child)").removeClass().hide();
+    $("#div-main > :has(form)").addClass("mx-auto");
+    $("form > div:nth-child(2)").addClass("gap-4").children('div').removeClass((_0x5e1610, _0x256b70) => _0x256b70.match(/m[tb]-\d/g));
+    $("div:has(> #btnSubmit)").addClass('mt-5');
+  }
+  #selectSlot() {
+    $(() => {
+      const _0x36caff = unsafeWindow.availDates?.ad?.filter(_0x32f662 => _0x32f662.AppointmentDateType === 0x0);
+      if (!_0x36caff || _0x36caff.length === 0) {
+        debugLog("No available dates found");
+        setTimeout(() => this.#selectSlot(), 1000); // Try again after a short delay
+        return;
+      }
+      
+      debugLog("Available dates found:", _0x36caff.length);
+      const _0x1e7dd3 = _0x2338b9(_0x36caff).at(0x0 + Math.floor(Math.random() * (_0x36caff.length - 0x1 - 0x0 + 0x1)));
+      if (_0x1e7dd3) {
+        debugLog("Selected date:", _0x1e7dd3.DateText);
+        const _0x3f7f2a = $(".k-datepicker:visible .k-input").data("kendoDatePicker");
+        if (_0x3f7f2a) {
+          _0x3f7f2a.value(_0x1e7dd3.DateText);
+          _0x3f7f2a.trigger("change");
+        } else {
+          debugLog("DatePicker not found");
+        }
+      }
+    });
+  }
+  #getAvailableSlotTimes() {
+    const _0x2b9215 = $(".k-datepicker:visible .k-input").val();
+    const _0x46db15 = $(".k-dropdown:visible > .form-control").data("kendoDropDownList");
+    if (!_0x2b9215) {
+      if (_0x46db15) {
+        _0x46db15.value(undefined);
+        _0x46db15.setDataSource([]);
+      }
+      return false;
+    }
+    
+    debugLog("Getting available slots for date:", _0x2b9215);
+    unsafeWindow.ShowLoader();
+    const _0x3ed835 = this;
+    $.ajax({
+      'type': "POST",
+      'url': "/MAR/appointment/GetAvailableSlotsByDate?data=" + encodeURIComponent(new URLSearchParams(location.search).get('data')) + "&appointmentDate=" + _0x2b9215,
+      'dataType': 'json',
+      'success'(_0x104d39) {
+        if (_0x104d39.success) {
+          debugLog("Slots data received:", _0x104d39.data?.length);
+          _0x3ed835.#selectSlotTime(unsafeWindow.slotDataSource = _0x104d39.data);
+          // Send telegram notification for available slots
+          _0x5d0f00(true);
+        } else {
+          debugLog("Error getting slots:", _0x104d39.err);
+          unsafeWindow.ShowError(_0x104d39.err);
+          if (_0x104d39.ru && unsafeWindow.confirm("You will be redirected to: " + _0x104d39.ru)) {
+            unsafeWindow.location.replace(_0x104d39.ru);
+          }
+        }
+      },
+      'error'(xhr, status, error) {
+        debugLog("AJAX error:", status, error);
+        unsafeWindow.HideLoader();
+      },
+      'complete'() {
+        unsafeWindow.HideLoader();
+      }
+    });
+  }
+  #selectSlotTime(_0x174546) {
+    if (!_0x174546 || _0x174546.length === 0) {
+      debugLog("No slots available");
+      return;
+    }
+  
+    const _0x3a69b4 = _0x174546.filter(_0x5a11b0 => _0x5a11b0.Count > 0x0);
+    if (_0x3a69b4.length === 0) {
+      debugLog("No slots with available count");
+      return;
+    }
+    
+    let _0x44116f = _0x2338b9(_0x3a69b4).at(0x0 + Math.floor(Math.random() * (_0x3a69b4.length - 0x1 - 0x0 + 0x1)));
+    _0x3a69b4.forEach(_0x25d35f => {
+      if (_0x25d35f.Count > _0x44116f.Count) {
+        _0x44116f = _0x25d35f;
+      }
+    });
+    
+    if (_0x44116f) {
+      debugLog("Selected slot:", _0x44116f);
+      speechSynthesis.speak(new SpeechSynthesisUtterance("Rendez-vous disponible !!!"));
+      
+      const _0x3f6ef3 = $(".k-dropdown:visible > .form-control").data("kendoDropDownList");
+      if (_0x3f6ef3) {
+        _0x3f6ef3.setDataSource(_0x174546);
+        _0x3f6ef3.value(_0x44116f.Id);
+        
+        if (/on|true/.test(autoSubmitForms?.['slotSelection'])) {
+          $(() => $("#btnSubmit").trigger("click"));
+        }
+      } else {
+        debugLog("Dropdown not found");
+      }
+    }
+  }
+}
+function _0x5d0f00(forceCheck = false) {
+  function _0x19a77a() {
+    const _0x22b41c = ["403 Forbidden", "504 Gateway Time-out", "Application Temporarily Unavailable", "503 Service Temporarily Unavailable", "This site can't be reached", "Aucun accès à Internet", "Too Many Requests"];
+    const _0x5375a5 = document.title;
+    
+    // Check if we're on an error page
+    if (_0x22b41c.includes(_0x5375a5) && !forceCheck) {
+      debugLog("Error page detected, not sending telegram notification");
+      return;
+    }
+    
+    try {
+      // Prepare notification data
+      const _0x3cb6bd = localStorage.getItem("spnlocation") || "Not found";
+      
+      // Determine category
+      let _0x469437 = "";
+      const category = localStorage.getItem("spncategory");
+      if (category === 'n' || category === 'normal') {
+        _0x469437 = " Normal";
+      } else if (category === 'pm' || category === 'premium') {
+        _0x469437 = " Premium";
+      } else if (category === 'pt' || category === 'primetime') {
+        _0x469437 = " Prime Time";
+      } else {
+        _0x469437 = " " + (category || "Unknown");
+      }
+      
+      // Determine visa type
+      let _0x3b3a53 = "";
+      const visaType = localStorage.getItem("spnvstype");
+      if (visaType === "sch") {
+        _0x3b3a53 = " Schengen Visa  🟣";
+      } else if (visaType === "famr") {
+        _0x3b3a53 = " Family Reunification  🔴";
+      } else if (visaType === "std") {
+        _0x3b3a53 = " Student Visa  🟡";
+      } else if (visaType === "work") {
+        _0x3b3a53 = "Work Visa  🟢";
+      } else if (visaType === "nat") {
+        _0x3b3a53 = " National Visa";
+      } else if (visaType === "c1") {
+        _0x3b3a53 = " Casa 1  1️⃣";
+      } else if (visaType === "c2") {
+        _0x3b3a53 = " Casa 2  2️⃣";
+      } else if (visaType === "c3") {
+        _0x3b3a53 = " Casa 3  3️⃣";
+      } else {
+        _0x3b3a53 = " " + (visaType || "Unknown");
+      }
+      
+      // Check if slots are available
+      let slotsInfo = "";
+      if (forceCheck && unsafeWindow.slotDataSource) {
+        const availableSlots = unsafeWindow.slotDataSource.filter(s => s.Count > 0);
+        if (availableSlots.length > 0) {
+          slotsInfo = "\n\n🎯 <b>SLOTS AVAILABLE!</b>\n" + 
+                      availableSlots.map(s => `• ${s.Name}: ${s.Count} slot(s)`).join("\n");
+        }
+      }
+      
+      // Send the telegram message
+      function _0x4b7d1a(_0x18d8ec) {
+        debugLog("Sending Telegram notification");
+        const _0x15532d = {
+          "Content-Type": "application/x-www-form-urlencoded"
+        };
+        GM_xmlhttpRequest({
+          'method': 'POST',
+          'url': "https://api.telegram.org/bot7257088385:AAFnMPaniXnRdh5NK0BNFVkzgoiXvlAJabU/sendMessage",
+          'data': "chat_id=-4796426844&text=" + encodeURIComponent(_0x18d8ec) + "&parse_mode=HTML",
+          'headers': _0x15532d,
+          'onload': function (_0x3f3474) {
+            if (_0x3f3474.status === 0xc8) {
+              debugLog("Telegram notification sent successfully");
+            } else {
+              console.error('Error sending Telegram notification:', _0x3f3474.statusText);
+            }
+          },
+          'onerror': function (_0x23ca8b) {
+            console.error("Telegram request failed:", _0x23ca8b);
+          }
+        });
+      }
+      
+      // Format the message
+      const _0x37f2a7 = "📍 <b>" + _0x3b3a53 + "</b>\n";
+      const _0x2d3546 = "🏫 <code>" + _0x3cb6bd + "</code>";
+      const _0x30cda2 = "📌 <code>" + _0x469437 + "</code>";
+      const _0x2dd845 = {
+        "timeZone": "Africa/Casablanca",
+        "hour": "2-digit",
+        minute: "2-digit",
+        "second": '2-digit'
+      };
+      const _0x42522a = "🇲🇦 <i>Last checked:</i> <code>" + new Date().toLocaleString("fr-FR", _0x2dd845) + "</code>";
+      const _0x196171 = [
+        "━━━━━━━━━━━━━━━━", 
+        _0x37f2a7, 
+        "━━━━━━━━━━━━━━━━", 
+        _0x2d3546, 
+        '', 
+        _0x30cda2, 
+        '', 
+        _0x42522a,
+        slotsInfo,
+        '', 
+        "🔔 <i>  Y 🥷🏻 Y  </i>"
+      ];
+      const _0xb75b52 = _0x196171.filter(_0x14b5b5 => _0x14b5b5).join("\n");
+      _0x4b7d1a(_0xb75b52);
+    } catch (error) {
+      console.error("Error preparing Telegram notification:", error);
+    }
+  }
+  _0x19a77a();
+}
+class _0x286e20 {
+  ["start"]() {
+    console.log(this.constructor.name + " started");
+    $(".modal:not(#logoutModal)").on("show.bs.modal", _0x2328dc => _0x2328dc.preventDefault());
+    this.#hidePreloader();
+    this.#makeLoaderDismissable();
+    this.#removeRandomnessFromUi();
+    const _0x4fb1ac = this.#getActiveApplicant();
+    if (_0x4fb1ac?.["profilePhotoId"]) {
+      $("#ApplicantPhotoId").val(_0x4fb1ac.profilePhotoId);
+    }
+    $("#uploadfile-1-preview").attr('src', "/MAR/query/getfile?fileid=" + _0x4fb1ac.profilePhotoId);
+    $("div[id^=app-]").first().trigger("click");
+    this.#remonitorOtp();
+    $(() => {
+      const _0x1bc76d = new Date();
+      _0x1bc76d.setMonth(_0x1bc76d.getMonth() + 0x1);
+      $("#TravelDate").data("kendoDatePicker").value(_0x1bc76d);
+      $("#EmailCode").prop('oncopy', null).prop('onpaste', null);
+    });
+  }
+  #hidePreloader() {
+    $(".preloader").hide();
+  }
+  #makeLoaderDismissable() {
+    $("\n      <button class=\"btn btn-secondary position-absolute top-50 start-50 translate-middle-x mt-5\"\n              onclick=\"window.HideLoader();\">\n        Hide Loader</button>\n    ").appendTo(".global-overlay-loader");
+  }
+  #removeRandomnessFromUi() {
+    $("#div-main > :is(:first-child, :last-child)").removeClass().hide();
+    $("#div-main > :has(form)").removeClass((_0x4629a0, _0x591184) => _0x591184.match(/col-(?:sm|md)-\d/g)).addClass(["col-md-6", 'mx-auto']);
+  }
+  #getActiveApplicant() {
+    const _0x4f49ab = $(".avatar + > p.small").text();
+    return applicants.find(({
+      mail: _0x6d54a2
+    }) => _0x6d54a2 === _0x4f49ab);
+  }
+  #remonitorOtp() {
+    const _0x5239f4 = () => {
+      $(":is(.spinner-grow, .bi-check-lg):has(+ #EmailCode)").remove();
+      GM_removeValueChangeListener(this._fetchOtpListenerId);
+      GM_setValue("ezbook_otp");
+    };
+    _0x5239f4();
+    $("<span class=\"spinner-grow spinner-grow-sm text-primary ms-2\"></span>").insertBefore("#EmailCode");
+    this._fetchOtpListenerId = GM_addValueChangeListener("ezbook_otp", (_0xa5ce4e, _0x5b58ef, _0x297d48, _0x1f3e65) => {
+      if (_0x1f3e65 && _0x297d48) {
+        _0x5239f4();
+        $("#EmailCode").val(_0x297d48);
+        $("<i class=\"bi bi-check-lg text-success\"></i>").insertBefore('#EmailCode');
+        if (/on|true/.test(autoSubmitForms?.["applicantSelection"])) {
+          $("#btnSubmit").trigger("click");
+        }
+      }
+    });
+  }
+}
+class _0x22cf1b {
+  ["install"]() {
+    setInterval(() => this.#displayUnreadEmails(), 0xfa);
+  }
+  #displayUnreadEmails() {
+    const _0x58ec1d = document.querySelectorAll(".zE");
+    if (_0x58ec1d.length > 0x0) {
+      for (let _0x2c3035 = 0x0; _0x2c3035 < 0x3; _0x2c3035++) {
+        const _0x6e1788 = _0x58ec1d[_0x2c3035];
+        const _0x5f477f = _0x6e1788.querySelector(".bA4 span").textContent;
+        if (/blsspainglobal|blsinternation/.test(_0x5f477f)) {
+          _0x6e1788.click();
+          _0x6e1788.classList.remove('zE');
+          setTimeout(() => this.#extractEmailContent(), 0x1f4);
+          break;
+        }
+      }
+    }
+  }
+  #extractEmailContent() {
+    const _0x53f288 = document.querySelector('.a3s');
+    if (_0x53f288) {
+      const _0x59a569 = _0x53f288.innerHTML;
+      if (_0x59a569) {
+        const _0x23bad8 = _0x59a569.match(/\b(\d{6})\b/);
+        if (_0x23bad8) {
+          const _0x8f5bd4 = _0x23bad8[0x1];
+          GM_setValue("ezbook_otp", _0x8f5bd4);
+          console.log("Found OTP", _0x8f5bd4);
+          const _0x340dd2 = document.querySelector(".nU.n1");
+          if (_0x340dd2) {
+            _0x340dd2.click();
+          }
+        }
+      }
+    }
+  }
+}
+if (location.hostname === "www.blsspainmorocco.net") {
+  switch (true) {
+    case _0x3863b6("/MAR/account/login"):
+      _0x38cdbd();
+      new _0x6e19da().start();
+      break;
+    case _0x3863b6("/MAR/newcaptcha/logincaptcha"):
+      _0x38cdbd();
+      new _0x26fc42().start();
+      break;
+    case _0x3863b6("/MAR/Appointment/AppointmentCaptcha"):
+      _0x38cdbd();
+      new _0x2075f9().start();
+      break;
+    case _0x3863b6("/MAR/Appointment/VisaType"):
+      _0x38cdbd();
+      new _0x7cb2cc().start();
+      break;
+    case _0x3863b6("/MAR/Appointment/SlotSelection"):
+      _0x5d0f00();
+      if (localStorage.getItem("submitslots") === 'on') {
+        new _0x5c0192().start();
+      }
+      break;
+    case _0x3863b6("/MAR/Appointment/ApplicantSelection"):
+      new _0x286e20().start();
+      break;
+    case _0x3863b6("/MAR/Appointment/NewAppointment"):
+      const _0x3e5fe8 = new _0x293dd7("https://www.blsspainmorocco.net/MAR/appointment/newappointment", 0xdac);
+      _0x3e5fe8.start();
+      break;
+    case _0x3863b6("/MAR/home/index"):
+      const _0x419683 = new _0x293dd7("https://www.blsspainmorocco.net/MAR/appointment/newappointment", 0x3e8);
+      _0x419683.start();
+      break;
+    case _0x3863b6("/MAR/account/changepassword"):
+      const _0x29c9d2 = new _0x293dd7("https://www.blsspainmorocco.net/MAR/appointment/newappointment", 0x3e8);
+      _0x29c9d2.start();
+      break;
+  }
+} else if (location.hostname === "mail.google.com") {
+  new _0x22cf1b().install();
+}
+function _0x38cdbd() {
+  const _0x50aeed = {
+    "values": ['n', 'pm', 'pt'],
+    "labels": ["normal", "Premium", "prime time"]
+  };
+  const _0x4f47a8 = {
+    'values': ['on', "off"]
+  };
+  const _0x22c48d = {
+    'values': ['on', "off"]
+  };
+  const _0x3fc9bf = {
+    Categoryspain: _0x50aeed,
+    "submitTVS": _0x4f47a8,
+    submitslots: _0x22c48d
+  };
+  function _0x52b690(_0x394607, _0x1f83cd, _0x491e25, _0x15b655 = "#4CAF50") {
+    const _0x52237b = document.createElement("button");
+    _0x52237b.id = _0x394607;
+    _0x52237b.textContent = _0x1f83cd;
+    _0x52237b.style.position = "fixed";
+    _0x52237b.style.top = _0x491e25 + 'px';
+    _0x52237b.style.left = "20px";
+    _0x52237b.style.zIndex = "9999";
+    _0x52237b.style.padding = "10px 20px";
+    _0x52237b.style.backgroundColor = _0x15b655;
+    _0x52237b.style.border = 'none';
+    _0x52237b.style.color = "white";
+    _0x52237b.style.textAlign = "center";
+    _0x52237b.style.textDecoration = "none";
+    _0x52237b.style.display = "inline-block";
+    _0x52237b.style.fontSize = "16px";
+    _0x52237b.style.cursor = "pointer";
+    _0x52237b.style.borderRadius = "5px";
+    _0x52237b.style.marginBottom = '10px';
+    document.body.appendChild(_0x52237b);
+    return _0x52237b;
+  }
+  function _0x170411(_0x5ef597, _0x4efd14) {
+    const _0x262990 = localStorage.getItem(_0x4efd14);
+    const _0x2775c7 = _0x3fc9bf[_0x4efd14].values.indexOf(_0x262990);
+    if (_0x2775c7 === -0x1) {
+      localStorage.setItem(_0x4efd14, _0x3fc9bf[_0x4efd14].values[0x0]);
+      _0x5ef597.textContent = " " + _0x3fc9bf[_0x4efd14].labels[0x0];
+    } else {
+      _0x5ef597.textContent = " " + _0x3fc9bf[_0x4efd14].labels[_0x2775c7];
+    }
+  }
+  function _0x1aeef5(_0x4d8af2, _0x3a89f5) {
+    const _0x3feada = localStorage.getItem(_0x3a89f5);
+    if (_0x3feada === 'on') {
+      _0x4d8af2.textContent = _0x3a89f5 + " (ON)";
+      _0x4d8af2.style.backgroundColor = "#4CAF50";
+    } else {
+      _0x4d8af2.textContent = _0x3a89f5 + " (OFF)";
+      _0x4d8af2.style.backgroundColor = '#f44336';
+    }
+  }
+  function _0xab429f(_0x1261a1, _0x3388af) {
+    const _0x1700e8 = localStorage.getItem(_0x1261a1);
+    const _0x13a972 = _0x3fc9bf[_0x1261a1].values.indexOf(_0x1700e8);
+    const _0x3b591d = (_0x13a972 + 0x1) % _0x3fc9bf[_0x1261a1].values.length;
+    const _0x49d3f3 = _0x3fc9bf[_0x1261a1].values[_0x3b591d];
+    localStorage.setItem(_0x1261a1, _0x49d3f3);
+    _0x170411(_0x3388af, _0x1261a1);
+    console.log("localStorage." + _0x1261a1 + " set to: " + _0x49d3f3);
+  }
+  function _0x5facee(_0x3ec8e7, _0x15291f) {
+    const _0x3a91da = localStorage.getItem(_0x3ec8e7);
+    const _0x24f209 = _0x3a91da === 'on' ? "off" : 'on';
+    localStorage.setItem(_0x3ec8e7, _0x24f209);
+    _0x1aeef5(_0x15291f, _0x3ec8e7);
+    console.log("localStorage." + _0x3ec8e7 + " set to: " + _0x24f209);
+  }
+  const _0x7dd61 = _0x52b690("categoryButton", "Categoryspain: normal", 0x14);
+  if (localStorage.getItem("Categoryspain") === null) {
+    localStorage.setItem("Categoryspain", _0x3fc9bf.Categoryspain.values[0x0]);
+  }
+  _0x170411(_0x7dd61, "Categoryspain");
+  _0x7dd61.addEventListener("click", () => _0xab429f("Categoryspain", _0x7dd61));
+  const _0x2a1a29 = _0x52b690("submitTVButton", "submitTVS (OFF)", 0x50);
+  if (localStorage.getItem('submitTVS') === null) {
+    localStorage.setItem("submitTVS", "off");
+  }
+  _0x1aeef5(_0x2a1a29, "submitTVS");
+  _0x2a1a29.addEventListener("click", () => _0x5facee("submitTVS", _0x2a1a29));
+  const _0x2fb50d = _0x52b690("submitslotButton", "submitslots (OFF)", 0x8c);
+  if (localStorage.getItem("submitslots") === null) {
+    localStorage.setItem("submitslots", 'off');
+  }
+  _0x1aeef5(_0x2fb50d, "submitslots");
+  _0x2fb50d.addEventListener("click", () => _0x5facee("submitslots", _0x2fb50d));
+  const _0x724017 = document.createElement("style");
+  _0x724017.textContent = "\n    body {\n        padding-bottom: 180px; /* Add padding to prevent buttons from overlapping content */\n    }\n";
+  document.head.appendChild(_0x724017);
+}
