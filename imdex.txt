@@ -1,856 +1,312 @@
-<!-- templates/index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynatrace Host Bulk Rename Manager</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+# app.py (updated with better debugging)
+from flask import Flask, render_template, request, jsonify
+import requests
+from typing import List, Dict
+import os
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+
+app = Flask(__name__)
+
+# Dynatrace Configuration
+DYNATRACE_URL = os.getenv('DYNATRACE_URL', 'https://apm-mutu-prod1.cagip.group.gca')
+DYNATRACE_ENV_ID = os.getenv('DYNATRACE_ENV_ID', 'LCL')
+DYNATRACE_API_TOKEN = os.getenv('DYNATRACE_API_TOKEN', '')
+
+class DynatraceAPI:
+    def __init__(self, url: str, env_id: str, token: str):
+        self.base_url = url.rstrip('/')
+        self.env_id = env_id
+        self.api_url = f"{self.base_url}/e/{self.env_id}/api"
+        self.headers = {
+            'Authorization': f'Api-Token {token}',
+            'Accept': 'application/json; charset=utf-8',
+            'Content-Type': 'application/json'
         }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+    
+    def test_connection(self) -> Dict:
+        """Test API connection"""
+        endpoint = f"{self.api_url}/v2/entities"
+        params = {
+            'entitySelector': 'type("HOST")',
+            'pageSize': 1,
+            'from': 'now-3d',
+            'to': 'now'
         }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
-        .content {
-            padding: 30px;
-        }
-
-        .step {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #667eea;
-        }
-
-        .step h2 {
-            margin-bottom: 15px;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .step-number {
-            background: #667eea;
-            color: white;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-            font-weight: bold;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-right: 10px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(56, 239, 125, 0.4);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .controls-left {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .search-box {
-            padding: 10px 15px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-            width: 300px;
-        }
-
-        .search-box:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .pagination {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .pagination select {
-            padding: 8px 12px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-
-        .table-container {
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-            color: #333;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .checkbox-cell {
-            width: 50px;
-            text-align: center;
-        }
-
-        .checkbox-cell input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .name-cell {
-            min-width: 250px;
-        }
-
-        .name-preview {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .original-name {
-            color: #666;
-        }
-
-        .new-name {
-            color: #28a745;
-            font-weight: 600;
-        }
-
-        .renamed-badge {
-            background: #ffc107;
-            color: #000;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            margin-left: 10px;
-        }
-
-        .will-rename {
-            background: #fff3cd;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            font-size: 18px;
-            color: #667eea;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .stat-card h3 {
-            font-size: 32px;
-            margin-bottom: 5px;
-        }
-
-        .stat-card p {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-
-        .stat-card.warning {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .stat-card.success {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .filter-section {
-            background: white;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-        }
-
-        .filter-section label {
-            margin-right: 15px;
-            font-weight: 600;
-        }
-
-        .filter-section select {
-            padding: 8px 12px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            margin-right: 15px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🖥️ Dynatrace Host Bulk Rename Manager</h1>
-            <p>Fetch all hosts, preview changes, and rename in bulk</p>
-        </div>
-
-        <div class="content">
-            <!-- Step 1: Fetch All Hosts -->
-            <div class="step">
-                <h2>
-                    <span class="step-number">1</span>
-                    Fetch All Hosts from Dynatrace
-                </h2>
-                <p style="margin-bottom: 15px; color: #666;">
-                    Click the button below to fetch all hosts from your Dynatrace environment.
-                </p>
-                <button class="btn btn-primary" onclick="fetchAllHosts()" id="fetchBtn">
-                    🔍 Fetch All Hosts
-                </button>
-            </div>
-
-            <!-- Loading State -->
-            <div id="loading" class="loading hidden">
-                <div class="spinner"></div>
-                <p>Fetching all hosts from Dynatrace... This may take a moment.</p>
-            </div>
-
-            <!-- Step 2: Configure Rename -->
-            <div id="step2" class="step hidden">
-                <h2>
-                    <span class="step-number">2</span>
-                    Configure Rename Pattern
-                </h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="oldPrefix">Old Prefix to Replace</label>
-                        <input type="text" id="oldPrefix" value="- C - PROD" placeholder="e.g., - C - PROD">
-                    </div>
-                    <div class="form-group">
-                        <label for="newPrefix">New Prefix</label>
-                        <input type="text" id="newPrefix" value="LCL - MUTU" placeholder="e.g., LCL - MUTU">
-                    </div>
-                </div>
-                <button class="btn btn-warning" onclick="previewRename()">
-                    👁️ Preview Rename Changes
-                </button>
-            </div>
-
-            <!-- Step 3: Select and Validate -->
-            <div id="step3" class="step hidden">
-                <h2>
-                    <span class="step-number">3</span>
-                    Select Hosts & Validate Changes
-                </h2>
-
-                <!-- Stats -->
-                <div class="stats">
-                    <div class="stat-card">
-                        <h3 id="totalHosts">0</h3>
-                        <p>Total Hosts</p>
-                    </div>
-                    <div class="stat-card warning">
-                        <h3 id="willRenameCount">0</h3>
-                        <p>Will Be Renamed</p>
-                    </div>
-                    <div class="stat-card success">
-                        <h3 id="selectedCount">0</h3>
-                        <p>Selected</p>
-                    </div>
-                </div>
-
-                <!-- Filters -->
-                <div class="filter-section">
-                    <label>Filter by OS Type:</label>
-                    <select id="osFilter" onchange="applyFilters()">
-                        <option value="">All OS Types</option>
-                    </select>
-                    
-                    <label>Show:</label>
-                    <select id="renameFilter" onchange="applyFilters()">
-                        <option value="all">All Hosts</option>
-                        <option value="willRename">Only Hosts to be Renamed</option>
-                        <option value="noRename">Only Unchanged Hosts</option>
-                    </select>
-                </div>
-
-                <!-- Controls -->
-                <div class="controls">
-                    <div class="controls-left">
-                        <input type="text" class="search-box" id="searchBox" 
-                               placeholder="Search by hostname..." onkeyup="applyFilters()">
-                        <button class="btn btn-primary" onclick="selectAll()">Select All</button>
-                        <button class="btn btn-primary" onclick="deselectAll()">Deselect All</button>
-                        <button class="btn btn-primary" onclick="selectPage()">Select Page</button>
-                        <button class="btn btn-primary" onclick="selectWillRename()">Select All to Rename</button>
-                    </div>
-                    <div class="pagination">
-                        <label>Per page:</label>
-                        <select id="itemsPerPage" onchange="changeItemsPerPage()">
-                            <option value="50">50</option>
-                            <option value="100" selected>100</option>
-                            <option value="200">200</option>
-                            <option value="500">500</option>
-                            <option value="1000">1000</option>
-                        </select>
-                        <button class="btn btn-primary" onclick="previousPage()" id="prevBtn">Previous</button>
-                        <span id="pageInfo">Page 1 of 1</span>
-                        <button class="btn btn-primary" onclick="nextPage()" id="nextBtn">Next</button>
-                    </div>
-                </div>
-
-                <!-- Table -->
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th class="checkbox-cell">
-                                    <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
-                                </th>
-                                <th class="name-cell">Host Name</th>
-                                <th>OS Type</th>
-                                <th>OS Version</th>
-                                <th>IP Address</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="hostsTableBody">
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Validate Button -->
-                <div style="margin-top: 30px; text-align: center;">
-                    <button class="btn btn-success" onclick="validateSelection()" id="validateBtn" disabled>
-                        ✓ Rename Selected Hosts
-                    </button>
-                </div>
-            </div>
-
-            <!-- Results Section -->
-            <div id="resultsSection" class="step hidden">
-                <h2>
-                    <span class="step-number">4</span>
-                    Rename Results
-                </h2>
-                <div id="resultsContent"></div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let allHosts = [];
-        let filteredHosts = [];
-        let currentPage = 1;
-        let itemsPerPage = 100;
-
-        async function fetchAllHosts() {
-            document.getElementById('fetchBtn').disabled = true;
-            document.getElementById('fetchBtn').textContent = 'Fetching...';
-            document.getElementById('loading').classList.remove('hidden');
-            document.getElementById('step2').classList.add('hidden');
-            document.getElementById('step3').classList.add('hidden');
-
-            try {
-                const response = await fetch('/api/fetch-all-hosts');
-                const data = await response.json();
-
-                if (data.success) {
-                    allHosts = data.hosts;
-                    filteredHosts = [...allHosts];
-                    
-                    document.getElementById('totalHosts').textContent = data.totalHosts;
-                    
-                    // Populate OS filter
-                    populateOSFilter();
-                    
-                    document.getElementById('step2').classList.remove('hidden');
-                    alert(`Successfully fetched ${data.totalHosts} hosts!`);
-                } else {
-                    alert('Error fetching hosts');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error connecting to server');
-            } finally {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('fetchBtn').disabled = false;
-                document.getElementById('fetchBtn').textContent = '🔍 Fetch All Hosts';
-            }
-        }
-
-        function populateOSFilter() {
-            const osTypes = [...new Set(allHosts.map(h => h.osType))].sort();
-            const osFilter = document.getElementById('osFilter');
-            osFilter.innerHTML = '<option value="">All OS Types</option>';
+        
+        try:
+            response = requests.get(endpoint, headers=self.headers, params=params, timeout=30)
             
-            osTypes.forEach(os => {
-                const option = document.createElement('option');
-                option.value = os;
-                option.textContent = os;
-                osFilter.appendChild(option);
-            });
-        }
-
-        async function previewRename() {
-            const oldPrefix = document.getElementById('oldPrefix').value;
-            const newPrefix = document.getElementById('newPrefix').value;
-
-            if (!oldPrefix || !newPrefix) {
-                alert('Please enter both old and new prefixes');
-                return;
+            return {
+                'success': response.status_code == 200,
+                'status_code': response.status_code,
+                'response': response.text[:500],
+                'endpoint': endpoint
             }
-
-            try {
-                const response = await fetch('/api/preview-rename', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ hosts: allHosts, oldPrefix, newPrefix })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    allHosts = data.hosts;
-                    filteredHosts = [...allHosts];
-                    
-                    const willRename = allHosts.filter(h => h.willBeRenamed).length;
-                    document.getElementById('willRenameCount').textContent = willRename;
-                    
-                    currentPage = 1;
-                    applyFilters();
-                    
-                    document.getElementById('step3').classList.remove('hidden');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error previewing rename');
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'endpoint': endpoint
             }
+    
+    def get_all_hosts(self) -> Dict:
+        """Fetch ALL hosts from Dynatrace with pagination"""
+        all_hosts = []
+        endpoint = f"{self.api_url}/v2/entities"
+        
+        params = {
+            'entitySelector': 'type("HOST")',
+            'fields': '+properties,+tags',
+            'pageSize': 500,
+            'from': 'now-3d',
+            'to': 'now'
         }
-
-        function applyFilters() {
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
-            const osFilter = document.getElementById('osFilter').value;
-            const renameFilter = document.getElementById('renameFilter').value;
-
-            filteredHosts = allHosts.filter(host => {
-                // Search filter
-                if (searchTerm && !host.displayName.toLowerCase().includes(searchTerm)) {
-                    return false;
-                }
-
-                // OS filter
-                if (osFilter && host.osType !== osFilter) {
-                    return false;
-                }
-
-                // Rename filter
-                if (renameFilter === 'willRename' && !host.willBeRenamed) {
-                    return false;
-                }
-                if (renameFilter === 'noRename' && host.willBeRenamed) {
-                    return false;
-                }
-
-                return true;
-            });
-
-            currentPage = 1;
-            renderTable();
-        }
-
-        function renderTable() {
-            const start = (currentPage - 1) * itemsPerPage;
-            const end = start + itemsPerPage;
-            const pageHosts = filteredHosts.slice(start, end);
-
-            const tbody = document.getElementById('hostsTableBody');
-            tbody.innerHTML = '';
-
-            pageHosts.forEach((host) => {
-                const row = tbody.insertRow();
+        
+        next_page_key = None
+        error_info = None
+        
+        try:
+            iteration = 0
+            while True:
+                iteration += 1
+                if next_page_key:
+                    params['nextPageKey'] = next_page_key
                 
-                if (host.willBeRenamed) {
-                    row.classList.add('will-rename');
-                }
-
-                const nameDisplay = host.willBeRenamed 
-                    ? `<div class="name-preview">
-                         <span class="original-name">${host.displayName}</span>
-                         <span class="new-name">→ ${host.newName}</span>
-                       </div>`
-                    : host.displayName;
-
-                const status = host.willBeRenamed 
-                    ? '<span class="renamed-badge">WILL RENAME</span>'
-                    : '<span style="color: #999;">No change</span>';
-
-                row.innerHTML = `
-                    <td class="checkbox-cell">
-                        <input type="checkbox" ${host.selected ? 'checked' : ''} 
-                               onchange="toggleHostSelection('${host.entityId}')">
-                    </td>
-                    <td class="name-cell">${nameDisplay}</td>
-                    <td>${host.osType}</td>
-                    <td>${host.osVersion}</td>
-                    <td>${Array.isArray(host.ipAddress) ? host.ipAddress.join(', ') : host.ipAddress}</td>
-                    <td>${status}</td>
-                `;
-            });
-
-            updatePagination();
-            updateSelectedCount();
-        }
-
-        function updatePagination() {
-            const totalPages = Math.ceil(filteredHosts.length / itemsPerPage);
-            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages} (${filteredHosts.length} hosts)`;
-            document.getElementById('prevBtn').disabled = currentPage === 1;
-            document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
-        }
-
-        function updateSelectedCount() {
-            const selected = allHosts.filter(h => h.selected).length;
-            document.getElementById('selectedCount').textContent = selected;
-            document.getElementById('validateBtn').disabled = selected === 0;
-        }
-
-        function toggleHostSelection(entityId) {
-            const host = allHosts.find(h => h.entityId === entityId);
-            if (host) {
-                host.selected = !host.selected;
-                updateSelectedCount();
-            }
-        }
-
-        function toggleSelectAll() {
-            const checked = document.getElementById('selectAllCheckbox').checked;
-            filteredHosts.forEach(host => {
-                const originalHost = allHosts.find(h => h.entityId === host.entityId);
-                if (originalHost) {
-                    originalHost.selected = checked;
-                }
-            });
-            renderTable();
-        }
-
-        function selectAll() {
-            allHosts.forEach(host => host.selected = true);
-            renderTable();
-        }
-
-        function deselectAll() {
-            allHosts.forEach(host => host.selected = false);
-            renderTable();
-        }
-
-        function selectPage() {
-            const start = (currentPage - 1) * itemsPerPage;
-            const end = start + itemsPerPage;
-            filteredHosts.slice(start, end).forEach(host => {
-                const originalHost = allHosts.find(h => h.entityId === host.entityId);
-                if (originalHost) {
-                    originalHost.selected = true;
-                }
-            });
-            renderTable();
-        }
-
-        function selectWillRename() {
-            allHosts.forEach(host => {
-                if (host.willBeRenamed) {
-                    host.selected = true;
-                }
-            });
-            renderTable();
-        }
-
-        function nextPage() {
-            const totalPages = Math.ceil(filteredHosts.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderTable();
-            }
-        }
-
-        function previousPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                renderTable();
-            }
-        }
-
-        function changeItemsPerPage() {
-            itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
-            currentPage = 1;
-            renderTable();
-        }
-
-        async function validateSelection() {
-            const selectedHosts = allHosts.filter(h => h.selected);
-            
-            if (selectedHosts.length === 0) {
-                alert('Please select at least one host');
-                return;
-            }
-
-            const willRename = selectedHosts.filter(h => h.willBeRenamed).length;
-
-            if (!confirm(`You are about to rename ${willRename} host(s).\n\nAre you sure you want to continue?`)) {
-                return;
-            }
-
-            document.getElementById('validateBtn').disabled = true;
-            document.getElementById('validateBtn').textContent = 'Renaming...';
-
-            try {
-                const response = await fetch('/api/update-hosts', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ selectedHosts })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    displayResults(data);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error updating hosts');
-            } finally {
-                document.getElementById('validateBtn').disabled = false;
-                document.getElementById('validateBtn').textContent = '✓ Rename Selected Hosts';
-            }
-        }
-
-        function displayResults(data) {
-            const resultsContent = document.getElementById('resultsContent');
-            
-            let html = `
-                <div class="stats">
-                    <div class="stat-card success">
-                        <h3>${data.updated}</h3>
-                        <p>Successfully Renamed</p>
-                    </div>
-                    <div class="stat-card warning">
-                        <h3>${data.failed}</h3>
-                        <p>Failed</p>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Original Name</th>
-                                <th>New Name</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-
-            data.results.forEach(result => {
-                const statusClass = result.success ? 'status-success' : 'status-error';
-                const statusText = result.success ? 'Success' : 'Failed';
+                app.logger.info(f"Iteration {iteration}: Fetching from {endpoint}")
+                app.logger.info(f"Params: {params}")
                 
-                html += `
-                    <tr>
-                        <td>${result.originalName}</td>
-                        <td>${result.newName}</td>
-                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                    </tr>
-                `;
-            });
-
-            html += `
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            resultsContent.innerHTML = html;
-            document.getElementById('resultsSection').classList.remove('hidden');
+                response = requests.get(endpoint, headers=self.headers, params=params, timeout=30)
+                
+                app.logger.info(f"Status Code: {response.status_code}")
+                
+                if response.status_code != 200:
+                    error_info = {
+                        'status_code': response.status_code,
+                        'response_text': response.text,
+                        'endpoint': endpoint
+                    }
+                    app.logger.error(f"Error response: {response.text}")
+                    break
+                
+                data = response.json()
+                
+                entities = data.get('entities', [])
+                all_hosts.extend(entities)
+                
+                total_count = data.get('totalCount', 0)
+                app.logger.info(f"Iteration {iteration}: Fetched {len(entities)} hosts. Total count: {total_count}. Accumulated: {len(all_hosts)}")
+                
+                # Check if there are more pages
+                next_page_key = data.get('nextPageKey')
+                if not next_page_key:
+                    break
+                
+                # Safety check to prevent infinite loops
+                if iteration > 100:
+                    app.logger.warning("Reached maximum iterations (100)")
+                    break
             
-            // Scroll to results
-            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+            return {
+                'success': True,
+                'hosts': all_hosts,
+                'total': len(all_hosts)
+            }
+                    
+        except requests.exceptions.Timeout:
+            return {
+                'success': False,
+                'error': 'Request timeout',
+                'hosts': [],
+                'total': 0
+            }
+        except requests.exceptions.RequestException as e:
+            app.logger.error(f"Request exception: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'error_info': error_info,
+                'hosts': [],
+                'total': 0
+            }
+        except Exception as e:
+            app.logger.error(f"Unexpected error: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'hosts': [],
+                'total': 0
+            }
+    
+    def update_host_name(self, entity_id: str, new_name: str) -> Dict:
+        """Update host display name"""
+        endpoint = f"{self.api_url}/v2/entities/{entity_id}"
+        payload = {
+            'displayName': new_name
         }
-    </script>
-</body>
-</html>
+        
+        try:
+            app.logger.info(f"Updating host {entity_id} to name: {new_name}")
+            response = requests.put(endpoint, headers=self.headers, json=payload, timeout=30)
+            response.raise_for_status()
+            return {'success': True, 'message': 'Updated successfully'}
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Error updating host {entity_id}: {e}"
+            app.logger.error(error_msg)
+            if hasattr(e, 'response') and e.response is not None:
+                app.logger.error(f"Response text: {e.response.text}")
+                error_msg = e.response.text
+            return {'success': False, 'message': error_msg}
+
+def transform_hostname(original_name: str, old_prefix: str, new_prefix: str) -> str:
+    """
+    Transform hostname by replacing old prefix with new prefix
+    Example: "- C - PROD - lp002app0012" -> "LCL - MUTU - lp002app0012"
+    """
+    name = original_name.strip()
+    
+    if name.startswith(old_prefix):
+        suffix = name[len(old_prefix):].lstrip(' -')
+        return f"{new_prefix} - {suffix}"
+    
+    return original_name
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """Get current configuration (without token)"""
+    return jsonify({
+        'dynatraceUrl': DYNATRACE_URL,
+        'environmentId': DYNATRACE_ENV_ID,
+        'hasToken': bool(DYNATRACE_API_TOKEN and len(DYNATRACE_API_TOKEN) > 10),
+        'apiEndpoint': f"{DYNATRACE_URL}/e/{DYNATRACE_ENV_ID}/api/v2/entities"
+    })
+
+@app.route('/api/test-connection', methods=['GET'])
+def test_connection():
+    """Test Dynatrace API connection"""
+    dynatrace = DynatraceAPI(DYNATRACE_URL, DYNATRACE_ENV_ID, DYNATRACE_API_TOKEN)
+    result = dynatrace.test_connection()
+    return jsonify(result)
+
+@app.route('/api/fetch-all-hosts', methods=['GET'])
+def fetch_all_hosts():
+    """Fetch ALL hosts from Dynatrace"""
+    
+    app.logger.info("=" * 80)
+    app.logger.info("FETCHING ALL HOSTS")
+    app.logger.info(f"URL: {DYNATRACE_URL}")
+    app.logger.info(f"ENV ID: {DYNATRACE_ENV_ID}")
+    app.logger.info(f"Token set: {bool(DYNATRACE_API_TOKEN)}")
+    app.logger.info("=" * 80)
+    
+    dynatrace = DynatraceAPI(DYNATRACE_URL, DYNATRACE_ENV_ID, DYNATRACE_API_TOKEN)
+    result = dynatrace.get_all_hosts()
+    
+    if not result['success']:
+        app.logger.error(f"Failed to fetch hosts: {result.get('error')}")
+        return jsonify({
+            'success': False,
+            'error': result.get('error'),
+            'error_info': result.get('error_info'),
+            'totalHosts': 0,
+            'hosts': []
+        })
+    
+    hosts = result['hosts']
+    
+    app.logger.info(f"Total hosts fetched: {len(hosts)}")
+    
+    # Process hosts
+    hosts_data = []
+    for host in hosts:
+        entity_id = host.get('entityId')
+        display_name = host.get('displayName', '')
+        properties = host.get('properties', {})
+        
+        hosts_data.append({
+            'entityId': entity_id,
+            'displayName': display_name,
+            'osType': properties.get('osType', 'Unknown'),
+            'osVersion': properties.get('osVersion', 'Unknown'),
+            'ipAddress': properties.get('ipAddress', []),
+            'monitoringMode': properties.get('monitoringMode', 'Unknown'),
+            'selected': False,
+            'willBeRenamed': False,
+            'newName': display_name
+        })
+    
+    return jsonify({
+        'success': True,
+        'totalHosts': len(hosts_data),
+        'hosts': hosts_data
+    })
+
+@app.route('/api/preview-rename', methods=['POST'])
+def preview_rename():
+    """Preview rename for selected hosts"""
+    data = request.json
+    hosts = data.get('hosts', [])
+    old_prefix = data.get('oldPrefix', '- C - PROD')
+    new_prefix = data.get('newPrefix', 'LCL - MUTU')
+    
+    updated_hosts = []
+    for host in hosts:
+        original_name = host['displayName']
+        
+        if old_prefix in original_name:
+            new_name = transform_hostname(original_name, old_prefix, new_prefix)
+            host['newName'] = new_name
+            host['willBeRenamed'] = True
+        else:
+            host['newName'] = original_name
+            host['willBeRenamed'] = False
+        
+        updated_hosts.append(host)
+    
+    return jsonify({
+        'success': True,
+        'hosts': updated_hosts
+    })
+
+@app.route('/api/update-hosts', methods=['POST'])
+def update_hosts():
+    """Update selected hosts in bulk"""
+    data = request.json
+    selected_hosts = data.get('selectedHosts', [])
+    
+    dynatrace = DynatraceAPI(DYNATRACE_URL, DYNATRACE_ENV_ID, DYNATRACE_API_TOKEN)
+    
+    results = []
+    for host in selected_hosts:
+        entity_id = host['entityId']
+        new_name = host['newName']
+        original_name = host['displayName']
+        
+        if new_name != original_name:
+            result = dynatrace.update_host_name(entity_id, new_name)
+            
+            results.append({
+                'entityId': entity_id,
+                'originalName': original_name,
+                'newName': new_name,
+                'success': result['success'],
+                'message': result.get('message', '')
+            })
+    
+    return jsonify({
+        'success': True,
+        'results': results,
+        'updated': sum(1 for r in results if r['success']),
+        'failed': sum(1 for r in results if not r['success'])
+    })
+
+if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    app.run(debug=True, host='0.0.0.0', port=5000)
