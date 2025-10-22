@@ -1,1 +1,323 @@
 
+
+# app.py (with SSL verification disabled)
+from flask import Flask, render_template, request, jsonify
+import requests
+from typing import List, Dict
+import os
+from datetime import datetime
+from dotenv import load_dotenv
+import urllib3
+
+# Disable SSL warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+load_dotenv()
+
+app = Flask(__name__)
+
+# Dynatrace Configuration
+DYNATRACE_URL = os.getenv('DYNATRACE_URL', 'https://apm-mutu-prod1.cagip.group.gca')
+DYNATRACE_ENV_ID = os.getenv('DYNATRACE_ENV_ID', 'LCL')
+DYNATRACE_API_TOKEN = os.getenv('DYNATRACE_API_TOKEN', '')
+
+class DynatraceAPI:
+    def __init__(self, url: str, env_id: str, token: str):
+        self.base_url = url.rstrip('/')
+        self.env_id = env_id
+        self.api_url = f"{self.base_url}/e/{self.env_id}/api"
+        self.headers = {
+            'Authorization': f'Api-Token {token}',
+            'Accept': 'application/json; charset=utf-8',
+            'Content-Type': 'application/json'
+        }
+        
+        # Setup session for connection pooling
+        self.session = requests.Session()
+        self.session.headers.update(self.headers)
+        self.session.verify = False  # Disable SSL verification
+        
+        app.logger.info(f"SSL Verification: Disabled")
+    
+    def test_connection(self) -> Dict:
+        """Test API connection"""
+        endpoint = f"{self.api_url}/v2/entities"
+        params = {
+            'entitySelector': 'type("HOST")',
+            'pageSize': 1,
+            'from': 'now-3d',
+            'to': 'now'
+        }
+        
+        try:
+            app.logger.info(f"Testing connection to: {endpoint}")
+            
+            response = self.session.get(
+                endpoint, 
+                params=params, 
+                timeout=30
+            )
+            
+            return {
+                'success': response.status_code == 200,
+                'status_code': response.status_code,
+                'response': response.text[:500],
+                'endpoint': endpoint
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'endpoint': endpoint
+            }
+    
+    def get_all_hosts(self) -> Dict:
+        """Fetch ALL hosts from Dynatrace with pagination"""
+        all_hosts = []
+        endpoint = f"{self.api_url}/v2/entities"
+        
+        params = {
+            'entitySelector': 'type("HOST")',
+            'fields': '+properties,+tags',
+            'pageSize': 500,
+            'from': 'now-3d',
+            'to': 'now'
+        }
+        
+        next_page_key = None
+        error_info = None
+        
+        try:
+            iteration = 0
+            while True:
+                iteration += 1
+                if next_page_key:
+                    params['nextPageKey'] = next_page_key
+                
+                app.logger.info(f"Iteration {iteration}: Fetching from {endpoint}")
+                app.logger.info(f"Params: {params}")
+                
+                response = self.session.get(
+                    endpoint, 
+                    params=params, 
+                    timeout=30
+                )
+                
+                app.logger.info(f"Status Code: {response.status_code}")
+                
+                if response.status_code != 200:
+                    error_info = {
+                        'status_code': response.status_code,
+                        'response_text': response.text,
+                        'endpoint': endpoint
+                    }
+                    app.logger.error(f"Error response: {response.text}")
+                    break
+                
+                data = response.json()
+                
+                entities = data.get('entities', [])
+                all_hosts.extend(entities)
+                
+                total_count = data.get('totalCount', 0)
+                app.logger.info(f"Iteration {iteration}: Fetched {len(entities)} hosts. Total count: {total_count}. Accumulated: {len(all_hosts)}")
+                
+                # Check if there are more pages
+                next_page_key = data.get('nextPageKey')
+                if not next_page_key:
+                    break
+                
+                # Safety check to prevent infinite loops
+                if iteration > 100:
+                    app.logger.warning("Reached maximum iterations (100)")
+                    break
+            
+            return {
+                'success': True,
+                'hosts': all_hosts,
+                'total': len(all_hosts)
+            }
+                    
+        except Exception as e:
+            app.logger.error(f"Error: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'error_info': error_info,
+                'hosts': [],
+                'total': 0
+            }
+    
+    def update_host_name(self, entity_id: str, new_name: str) -> Dict:
+        """Update host display name"""
+        endpoint = f"{self.api_url}/v2/entities/{entity_id}"
+        payload = {
+            'displayName': new_name
+        }
+        
+        try:
+            app.logger.info(f"Updating host {entity_id} to name: {new_name}")
+            response = self.session.put(
+                endpoint, 
+                json=payload, 
+                timeout=30
+            )
+            response.raise_for_status()
+            return {'success': True, 'message': 'Updated successfully'}
+        except Exception as e:
+            error_msg = f"Error updating host {entity_id}: {e}"
+            app.logger.error(error_msg)
+            return {'success': False, 'message': str(e)}
+
+def transform_hostname(original_name: str, old_prefix: str, new_prefix: str) -> str:
+    """
+    Transform hostname by replacing old prefix with new prefix
+    Example: "- C - PROD - lp002app0012" -> "LCL - MUTU - lp002app0012"
+    """
+    name = original_name.strip()
+    
+    if name.startswith(old_prefix):
+        suffix = name[len(old_prefix):].lstrip(' -')
+        return f"{new_prefix} - {suffix}"
+    
+    return original_name
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """Get current configuration (without token)"""
+    return jsonify({
+        'dynatraceUrl': DYNATRACE_URL,
+        'environmentId': DYNATRACE_ENV_ID,
+        'hasToken': bool(DYNATRACE_API_TOKEN and len(DYNATRACE_API_TOKEN) > 10),
+        'apiEndpoint': f"{DYNATRACE_URL}/e/{DYNATRACE_ENV_ID}/api/v2/entities",
+        'verifySSL': False
+    })
+
+@app.route('/api/test-connection', methods=['GET'])
+def test_connection():
+    """Test Dynatrace API connection"""
+    dynatrace = DynatraceAPI(DYNATRACE_URL, DYNATRACE_ENV_ID, DYNATRACE_API_TOKEN)
+    result = dynatrace.test_connection()
+    return jsonify(result)
+
+@app.route('/api/fetch-all-hosts', methods=['GET'])
+def fetch_all_hosts():
+    """Fetch ALL hosts from Dynatrace"""
+    
+    app.logger.info("=" * 80)
+    app.logger.info("FETCHING ALL HOSTS")
+    app.logger.info(f"URL: {DYNATRACE_URL}")
+    app.logger.info(f"ENV ID: {DYNATRACE_ENV_ID}")
+    app.logger.info(f"Token set: {bool(DYNATRACE_API_TOKEN)}")
+    app.logger.info(f"Verify SSL: Disabled")
+    app.logger.info("=" * 80)
+    
+    dynatrace = DynatraceAPI(DYNATRACE_URL, DYNATRACE_ENV_ID, DYNATRACE_API_TOKEN)
+    result = dynatrace.get_all_hosts()
+    
+    if not result['success']:
+        app.logger.error(f"Failed to fetch hosts: {result.get('error')}")
+        return jsonify({
+            'success': False,
+            'error': result.get('error'),
+            'error_info': result.get('error_info'),
+            'totalHosts': 0,
+            'hosts': []
+        })
+    
+    hosts = result['hosts']
+    
+    app.logger.info(f"Total hosts fetched: {len(hosts)}")
+    
+    # Process hosts
+    hosts_data = []
+    for host in hosts:
+        entity_id = host.get('entityId')
+        display_name = host.get('displayName', '')
+        properties = host.get('properties', {})
+        
+        hosts_data.append({
+            'entityId': entity_id,
+            'displayName': display_name,
+            'osType': properties.get('osType', 'Unknown'),
+            'osVersion': properties.get('osVersion', 'Unknown'),
+            'ipAddress': properties.get('ipAddress', []),
+            'monitoringMode': properties.get('monitoringMode', 'Unknown'),
+            'selected': False,
+            'willBeRenamed': False,
+            'newName': display_name
+        })
+    
+    return jsonify({
+        'success': True,
+        'totalHosts': len(hosts_data),
+        'hosts': hosts_data
+    })
+
+@app.route('/api/preview-rename', methods=['POST'])
+def preview_rename():
+    """Preview rename for selected hosts"""
+    data = request.json
+    hosts = data.get('hosts', [])
+    old_prefix = data.get('oldPrefix', '- C - PROD')
+    new_prefix = data.get('newPrefix', 'LCL - MUTU')
+    
+    updated_hosts = []
+    for host in hosts:
+        original_name = host['displayName']
+        
+        if old_prefix in original_name:
+            new_name = transform_hostname(original_name, old_prefix, new_prefix)
+            host['newName'] = new_name
+            host['willBeRenamed'] = True
+        else:
+            host['newName'] = original_name
+            host['willBeRenamed'] = False
+        
+        updated_hosts.append(host)
+    
+    return jsonify({
+        'success': True,
+        'hosts': updated_hosts
+    })
+
+@app.route('/api/update-hosts', methods=['POST'])
+def update_hosts():
+    """Update selected hosts in bulk"""
+    data = request.json
+    selected_hosts = data.get('selectedHosts', [])
+    
+    dynatrace = DynatraceAPI(DYNATRACE_URL, DYNATRACE_ENV_ID, DYNATRACE_API_TOKEN)
+    
+    results = []
+    for host in selected_hosts:
+        entity_id = host['entityId']
+        new_name = host['newName']
+        original_name = host['displayName']
+        
+        if new_name != original_name:
+            result = dynatrace.update_host_name(entity_id, new_name)
+            
+            results.append({
+                'entityId': entity_id,
+                'originalName': original_name,
+                'newName': new_name,
+                'success': result['success'],
+                'message': result.get('message', '')
+            })
+    
+    return jsonify({
+        'success': True,
+        'results': results,
+        'updated': sum(1 for r in results if r['success']),
+        'failed': sum(1 for r in results if not r['success'])
+    })
+
+if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    app.run(debug=True, host='0.0.0.0', port=5000)
